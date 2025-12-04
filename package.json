@@ -3,17 +3,18 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build:olap:types": "tsc -p tsconfig.olap.json --declaration --emitDeclarationOnly",
-    "build:olap": "pnpm build:olap:types && tsc -p tsconfig.olap.json",
+    "build:olap:types": "tspc -p tsconfig.olap.json --declaration --emitDeclarationOnly",
+    "build:olap": "pnpm build:olap:types && tspc -p tsconfig.olap.json",
     "dev:next": "next dev --turbopack",
     "dev:moose": "moose-cli dev",
     "dev": "pnpm build:olap && pnpm dev:next",
     "build": "pnpm build:olap && next build",
     "start": "next start",
-    "moose": "moose-cli"
+    "moose": "moose-cli",
+    "moose:update": "pnpm update @514labs/moose-lib @514labs/moose-cli"
   },
   "dependencies": {
-    "@514labs/moose-lib": "latest",
+    "@514labs/moose-lib": "^0.6.225",
     "@neondatabase/serverless": "^0.9.5",
     "@radix-ui/react-dialog": "^1.1.4",
     "@radix-ui/react-dropdown-menu": "^2.1.4",
@@ -44,12 +45,13 @@
     "tailwindcss-animate": "^1.0.7",
     "ts-patch": "^3.3.0",
     "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.2",
     "typia": "^9.6.1",
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@514labs/moose-cli": "latest",
+    "@514labs/moose-cli": "^0.6.225",
     "@types/node": "^20.12.12",
     "ts-node": "^10.9.2",
     "tsup": "^8.5.1"

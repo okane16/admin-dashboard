@@ -19,7 +19,7 @@ port = 4000
 management_port = 5001
 # Script to run when files in source_dir change
 # This will recompile OLAP models when olap/index.ts changes
-on_reload_complete_script = "tsc -p tsconfig.olap.json"
+on_reload_complete_script = "tspc -p tsconfig.olap.json"
 
 [features]
 streaming_engine = false

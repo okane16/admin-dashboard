@@ -1,84 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Events, type EventModel } from '@/olap';
-import crypto from 'crypto';
-
-// Mock data helpers aligned with lib/db.ts products
-const PRODUCTS = [
-  { id: 1, name: 'Laser Lemonade Machine', price: 499.99 },
-  { id: 2, name: 'Hypernova Headphones', price: 129.99 },
-  { id: 3, name: 'AeroGlow Desk Lamp', price: 39.99 },
-  { id: 4, name: 'TechTonic Energy Drink', price: 4.99 },
-  { id: 5, name: 'QuantumKeyboard', price: 199.99 }
-];
-
-const CUSTOMERS = [
-  { id: 'c1', name: 'Olivia Martin', email: 'olivia.martin@email.com' },
-  { id: 'c2', name: 'Jackson Lee', email: 'jackson.lee@email.com' },
-  { id: 'c3', name: 'Isabella Nguyen', email: 'isabella.nguyen@email.com' },
-  { id: 'c4', name: 'William Kim', email: 'will@email.com' },
-  { id: 'c5', name: 'Sofia Davis', email: 'sofia.davis@email.com' },
-  { id: 'c6', name: 'Ethan Wilson', email: 'ethan.wilson@email.com' }
-];
-
-function getRandomElement<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function getRandomDate(start: Date, end: Date): Date {
-  return new Date(
-    start.getTime() + Math.random() * (end.getTime() - start.getTime())
-  );
-}
-
-function generateEvent(): EventModel {
-  const product = getRandomElement(PRODUCTS);
-  const customer = getRandomElement(CUSTOMERS);
-  const quantity = Math.floor(Math.random() * 3) + 1;
-  const eventType = Math.random() > 0.2 ? 'purchase' : 'view_product';
-  const date = getRandomDate(new Date('2024-01-01'), new Date());
-
-  return {
-    transaction_id: crypto.randomUUID(),
-    event_type: eventType,
-    product_id: product.id,
-    customer_id: customer.id,
-    amount: eventType === 'purchase' ? product.price * quantity : 0,
-    quantity: eventType === 'purchase' ? quantity : 0,
-    event_time: date,
-    customer_email: customer.email,
-    customer_name: customer.name,
-    product_name: product.name,
-    status: eventType === 'purchase' ? 'completed' : 'active'
-  };
-}
+import { seedDatabases } from '@/lib/seed';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
-    const count = body.count || 500; // Allow custom count via request body
+    const eventCount = body.count || 500;
 
-    console.log(`🌱 Seeding ClickHouse with ${count} events...`);
+    const result = await seedDatabases({ eventCount });
 
-    const events: EventModel[] = Array.from({ length: count }, generateEvent);
-
-    try {
-      // Use the ClickHouse client's insert method with the Events table
-      await Events.insert(events);
-
-      console.log(`✅ Seeded ${count} events successfully`);
-
+    if (result.success) {
       return NextResponse.json({
         success: true,
-        message: `Successfully seeded ${count} events`,
-        count: events.length
+        message: 'Successfully seeded both databases',
+        results: result.results
       });
-    } catch (e: any) {
-      console.error('❌ Failed to seed data:', e);
+    } else {
       return NextResponse.json(
         {
           success: false,
-          error: 'Failed to insert data into ClickHouse',
-          details: e.message
+          error: 'Seeding completed with errors',
+          results: result.results
         },
         { status: 500 }
       );
