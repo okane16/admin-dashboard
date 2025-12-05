@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { db, products } from './db';
-import { Events, EventModel } from 'dist/models';
+import { Events, EventModel } from 'moose/models';
 import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
 

@@ -20,6 +20,6 @@
     ],
     "strictNullChecks": true
   },
-  "include": ["olap/**/*"],
+  "include": ["moose/**/*"],
   "exclude": ["node_modules", "dist"]
 }

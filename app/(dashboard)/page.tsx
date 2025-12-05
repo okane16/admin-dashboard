@@ -16,7 +16,7 @@ import {
   Activity
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getOverviewMetrics, getCustomerStats } from 'dist/index';
+import { getOverviewMetrics, getCustomerStats } from '@/moose/queries';
 import { getProducts } from '@/lib/db';
 import { count } from 'drizzle-orm';
 import { products } from '@/lib/db';

@@ -9,7 +9,7 @@ import {
   getRecentSales,
   getTopProducts,
   getCustomerStats
-} from '@/olap/queries';
+} from '@/moose/queries';
 import {
   MetricCard,
   RevenueChart,

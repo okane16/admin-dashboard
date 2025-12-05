@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { RevenueOverTimeDataPoint } from 'dist/queries/revenue-over-time';
+import { RevenueOverTimeDataPoint } from '@/moose/queries';
 
 interface RevenueChartProps {
   data: RevenueOverTimeDataPoint[];

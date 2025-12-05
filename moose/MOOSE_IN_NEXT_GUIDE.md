@@ -4,28 +4,26 @@ This guide explains how to embed a [MooseStack](https://github.com/514-labs/moos
 
 ## Prerequisites
 
-- Node.js **v20** (recommended for native module compatibility)
-- pnpm, npm, or yarn
-
-> ⚠️ **Important:** Use Node.js v20 for both `dev:moose` and `dev:next` to avoid native module version mismatches with `@confluentinc/kafka-javascript`.
+- Node.js >= **v20** (recommended for native module compatibility)
+- pnpm or npm
 
 ---
 
 ## 1. Install Dependencies
 
-Add the Moose CLI, library, and build tools to your project.
+Add the Moose CLI, library, and build tools to your project:
 
 **Update `package.json`:**
 
 ```json
 {
   "scripts": {
-    "build:olap:types": "tspc -p tsconfig.olap.json --declaration --emitDeclarationOnly",
-    "build:olap": "pnpm build:olap:types && tspc -p tsconfig.olap.json",
+    "build:moose:types": "tspc -p tsconfig.moose.json --declaration --emitDeclarationOnly",
+    "build:moose": "pnpm build:moose:types && tspc -p tsconfig.moose.json",
     "dev:next": "next dev --turbopack",
     "dev:moose": "moose-cli dev",
-    "dev": "pnpm build:olap && pnpm dev:next",
-    "build": "pnpm build:olap && next build",
+    "dev": "pnpm build:moose && pnpm dev:next",
+    "build": "pnpm build:moose && next build",
     "moose": "moose-cli"
   },
   "dependencies": {
@@ -50,17 +48,19 @@ Add the Moose CLI, library, and build tools to your project.
 
 ```bash
 pnpm install
+# First build (generates dist/ for @/moose/* imports)
+pnpm build:moose
 ```
 
 ---
 
 ## 2. Configure TypeScript
 
-Set up TypeScript to handle Moose models separately from your Next.js app.
+Set up TypeScript so Moose can run your OLAP TypeScript with `ts-node`, while Next.js consumes the compiled output in `dist/`.
 
 ### 2.1 Update `tsconfig.json`
 
-Add the `ts-node` configuration block (required for `moose-cli dev` to work correctly), path mappings for compiled OLAP models, and exclude the source `olap` folder and `dist` output.
+Add the `ts-node` configuration block (required for `moose-cli dev` to work correctly), path mappings for compiled OLAP models, and exclude the source `moose` folder and `dist` output.
 
 ```json
 {
@@ -89,24 +89,24 @@ Add the `ts-node` configuration block (required for `moose-cli dev` to work corr
     "paths": {
       "@/components/*": ["components/*"],
       "@/lib/*": ["lib/*"],
-      "@/olap/*": ["dist/*"]
+      "@/moose/*": ["dist/*"]
     },
     "plugins": [{ "name": "next" }]
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "dist", "olap"]
+  "exclude": ["node_modules", "dist", "moose"]
 }
 ```
 
 > **Key points:**
 >
 > - The `ts-node` block ensures `moose-cli dev` uses CommonJS module resolution (required for directory imports like `./models` to work).
-> - The `@/olap/*` path maps to `dist/*` where compiled models are output.
-> - Both `dist` and `olap` are excluded so Next.js doesn't try to compile them.
+> - The `@/moose/*` path maps to `dist/*` where compiled models are output.
+> - Both `dist` and `moose` are excluded so Next.js doesn't try to compile them; remember to rebuild after changing files in `moose/` so `dist/` stays in sync.
 
-### 2.2 Create `tsconfig.olap.json`
+### 2.2 Create `tsconfig.moose.json`
 
-This dedicated config extends your main tsconfig but overrides settings for compiling OLAP models with the necessary plugins.
+This dedicated config extends your main tsconfig but overrides settings for compiling Moose OLAP models with the necessary plugins.
 
 ```json
 {
@@ -131,7 +131,7 @@ This dedicated config extends your main tsconfig but overrides settings for comp
     ],
     "strictNullChecks": true
   },
-  "include": ["olap/**/*"],
+  "include": ["moose/**/*"],
   "exclude": ["node_modules", "dist"]
 }
 ```
@@ -167,13 +167,13 @@ export default nextConfig;
 
 ---
 
-## 4. Initialize Moose
+## 4. Initialize Moose OLAP
 
 ### 4.1 Create Directory Structure
 
 ```
 your-nextjs-app/
-├── olap/
+├── moose/
 │   ├── index.ts          # Main export file
 │   ├── models/
 │   │   ├── index.ts      # Export all models
@@ -188,7 +188,7 @@ your-nextjs-app/
 └── package.json
 ```
 
-### 4.2 Create `olap/index.ts`
+### 4.2 Create `moose/index.ts`
 
 This file re-exports everything from your models and queries:
 
@@ -203,7 +203,7 @@ Place this in your project root:
 
 ```toml
 language = "Typescript"
-source_dir = "olap"
+source_dir = "moose"
 
 [state_config]
 storage = "clickhouse"
@@ -221,14 +221,15 @@ native_port = 9000
 host = "localhost"
 port = 4000
 management_port = 5001
-on_reload_complete_script = "tspc -p tsconfig.olap.json"
+on_reload_complete_script = "pnpm build:olap"
 
 [features]
 streaming_engine = false
 data_model_v2 = true
 ```
 
-> **Note:** The `on_reload_complete_script` uses `tspc` to recompile models with plugins when files change during `dev:moose`.
+> **Note:** The reload script recompiles your OLAP models with the compiler plugins so that the models your Next.js app imports are always updated when you make a change during `moose-cli dev`.
+> **Docker required for `pnpm dev:moose`:** Moose spins up ClickHouse via Docker; ensure Docker is running.
 
 ---
 
@@ -266,7 +267,7 @@ dist/
 **Option A: Run Next.js only (with pre-compiled models)**
 
 ```bash
-pnpm dev
+pnpm dev        # assumes pnpm build:olap has been run at least once
 ```
 
 This compiles your OLAP models once and starts Next.js. Use this when you're primarily working on the frontend.
@@ -275,11 +276,12 @@ This compiles your OLAP models once and starts Next.js. Use this when you're pri
 
 ```bash
 pnpm dev:moose
+pnpm dev   # in a second terminal
 ```
 
 This starts the Moose development server which:
 
-- Watches for changes in `olap/`
+- Watches for changes in `moose/`
 - Manages ClickHouse infrastructure
 - Auto-recompiles models on change
 
@@ -295,13 +297,49 @@ pnpm build
 
 ## Troubleshooting
 
+### "Module not found: Can't resolve '@/moose/...'"
+
+1. Run `pnpm build:moose` to create `dist/`
+2. Ensure `tsconfig.json` has the correct path mapping: `"@/moose/*": ["dist/*"]`
+3. Keep `dist` out of Next.js compilation (it is excluded in `tsconfig.json`)
+
 ### "Supply the type param T so that the schema is inserted by the compiler plugin"
 
-This error means the compiler plugin didn't run. Ensure:
+This usually means you're importing the raw source instead of the compiled output (the transformer never ran), so no schema was injected. Ensure:
 
-1. You're using `tspc` (not `tsc`) in your build scripts
+1. Make sure your `package.json` has the correct build scripts to compile the Moose OLAP models:
+   ```json filename="package.json"
+   "scripts": {
+     "build:moose:types": "tspc -p tsconfig.moose.json --declaration --emitDeclarationOnly",
+     "build:moose": "pnpm build:moose:types && tspc -p tsconfig.moose.json"
+   }
+   ```
 2. The `ts-patch` package is installed
-3. The plugins are correctly configured in `tsconfig.olap.json`
+   ```bash
+   pnpm install ts-patch
+   ```
+3. The compiler plugins are correctly configured in `tsconfig.moose.json`
+   ```json filename="tsconfig.moose.json"
+   "plugins": [
+     {
+       "transform": "typia/lib/transform"
+       },
+       {
+         "transform": "./node_modules/@514labs/moose-lib/dist/compilerPlugin.js",
+         "transformProgram": true
+       }
+     ]
+   ```
+4. Next.js imports from `dist/` via the `@/moose/*` path alias, not directly from the source folder
+   ```typescript filename="next.config.ts"
+   export default {
+     paths: {
+       '@/moose/*': ['dist/*']
+     }
+   };
+   ```
+
+**IMPORTANT:** Double check your imports in your Next.js components are using the `@/moose/*` path alias, not directly from the source folder.
 
 ### "ERR_UNSUPPORTED_DIR_IMPORT" when running `moose-cli dev`
 
@@ -323,28 +361,20 @@ This happens when `ts-node` uses ESM module resolution. Ensure your `tsconfig.js
 This occurs when switching Node.js versions. Fix by:
 
 1. Ensuring you're on Node.js v20
-2. Running `pnpm install` to rebuild native modules
+2. Running `pnpm install` to rebuild native modules (e.g., `@confluentinc/kafka-javascript`)
 3. If issues persist, delete `node_modules` and reinstall
-
-### "Module not found: Can't resolve '@/olap/...'"
-
-Ensure:
-
-1. The `dist/` folder exists (run `pnpm build:olap`)
-2. Your `tsconfig.json` has the correct path mapping: `"@/olap/*": ["dist/*"]`
-3. The `dist` folder is not in your `exclude` array for Next.js compilation
 
 ---
 
 ## Example Model
 
-Here's an example of a Moose OLAP table model:
+Here's an example that mirrors the real `olap/models/events.ts`:
 
 ```typescript
 // olap/models/events.ts
 import { OlapTable } from '@514labs/moose-lib';
 
-interface Event {
+export interface EventModel {
   transaction_id: string;
   event_type: string;
   product_id: number;
@@ -352,40 +382,91 @@ interface Event {
   amount: number;
   quantity: number;
   event_time: Date;
+  // Denormalized fields for simpler analytics queries without joins in this demo
   customer_email: string;
   customer_name: string;
   product_name: string;
-  status: string;
+  status: string; // e.g. 'completed', 'active', 'inactive'
 }
 
-export const Events = new OlapTable<Event>('events', {
+export const Events = new OlapTable<EventModel>('events', {
   orderByFields: ['event_time']
 });
+```
+
+## Client Initialization
+
+```typescript
+import { getMooseClients, Sql } from '@514labs/moose-lib';
+
+const globalForMoose = globalThis as unknown as {
+  mooseClient: Awaited<ReturnType<typeof getMooseClients>> | undefined;
+};
+
+export const getMoose = async () => {
+  if (globalForMoose.mooseClient) return globalForMoose.mooseClient;
+
+  const client = await getMooseClients({
+    database: process.env.MOOSE_CLICKHOUSE_CONFIG__DB_NAME,
+    host: process.env.MOOSE_CLICKHOUSE_CONFIG__HOST,
+    port: process.env.MOOSE_CLICKHOUSE_CONFIG__PORT,
+    username: process.env.MOOSE_CLICKHOUSE_CONFIG__USER,
+    password: process.env.MOOSE_CLICKHOUSE_CONFIG__PASSWORD,
+    useSSL: process.env.MOOSE_CLICKHOUSE_CONFIG__USE_SSL === 'true'
+  });
+
+  if (process.env.NODE_ENV !== 'production') {
+    globalForMoose.mooseClient = client;
+  }
+  return client;
+};
 ```
 
 ## Example Query
 
 ```typescript
 // olap/queries/overview-metrics.ts
-import { Events } from '../models';
+import { sql } from '@514labs/moose-lib';
+import { Events } from '../models/events';
+import { executeQuery } from './client';
+import { DateRange } from './revenue-over-time';
 
-export async function getOverviewMetrics() {
-  const result = await Events.select({
-    columns: ['sum(amount) as total_revenue'],
-    where: "event_type = 'purchase'"
-  });
-  return result;
-}
+export const getOverviewMetrics = async (dateRange?: DateRange) => {
+  const startDate = dateRange?.start.toISOString().split('T')[0];
+  const endDate = dateRange?.end.toISOString().split('T')[0];
+
+  const dateFilter = dateRange
+    ? sql`AND event_time >= toDate(${startDate!}) AND event_time <= toDate(${endDate!})`
+    : sql``;
+
+  const revenue = await executeQuery<{ total_revenue: number }[]>(
+    sql`SELECT sum(amount) as total_revenue FROM ${Events} WHERE event_type = 'purchase' ${dateFilter}`
+  );
+
+  const sales = await executeQuery<{ total_sales: number }[]>(
+    sql`SELECT count(*) as total_sales FROM ${Events} WHERE event_type = 'purchase' ${dateFilter}`
+  );
+
+  const activeUsers = await executeQuery<{ active_users: number }[]>(
+    sql`SELECT uniq(customer_id) as active_users FROM ${Events} WHERE event_time > now() - interval 1 hour`
+  );
+
+  return {
+    totalRevenue: revenue[0]?.total_revenue || 0,
+    totalSales: sales[0]?.total_sales || 0,
+    activeNow: activeUsers[0]?.active_users || 0
+  };
+};
 ```
 
 ---
 
 ## Summary
 
-| File                 | Purpose                                                    |
-| -------------------- | ---------------------------------------------------------- |
-| `tsconfig.json`      | Main Next.js config with `ts-node` block and path mappings |
-| `tsconfig.olap.json` | OLAP-specific config with compiler plugins                 |
-| `moose.config.toml`  | Moose CLI configuration                                    |
-| `olap/`              | Source directory for models and queries                    |
-| `dist/`              | Compiled output imported by Next.js                        |
+| File                  | Purpose                                                    |
+| --------------------- | ---------------------------------------------------------- |
+| `tsconfig.json`       | Main Next.js config with `ts-node` block and path mappings |
+| `tsconfig.moose.json` | Moose-specific config with compiler plugins                |
+| `moose.config.toml`   | Moose CLI configuration                                    |
+| `moose/`              | Source directory for models and queries                    |
+| `dist/`               | Compiled output imported by Next.js                        |

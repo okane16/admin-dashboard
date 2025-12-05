@@ -5,7 +5,7 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card';
-import { EventModel } from 'dist/models/events';
+import { EventModel } from '@/moose/models';
 
 interface RecentSalesListProps {
   sales: EventModel[];

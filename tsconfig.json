@@ -24,14 +24,19 @@
     "paths": {
       "@/components/*": ["components/*"],
       "@/lib/*": ["lib/*"],
-      "@/olap/*": ["dist/*"]
+      "@/moose/*": ["dist/*"]
     },
     "plugins": [
       {
-        "name": "next"
+        "name": "next",
+        "transform": "./node_modules/@514labs/moose-lib/dist/compilerPlugin.js",
+        "transformProgram": true
+      },
+      {
+        "transform": "typia/lib/transform"
       }
     ]
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "dist", "olap"]
+  "exclude": ["node_modules", "dist", "moose"]
 }

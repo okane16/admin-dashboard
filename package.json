@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build:olap:types": "tspc -p tsconfig.olap.json --declaration --emitDeclarationOnly",
-    "build:olap": "pnpm build:olap:types && tspc -p tsconfig.olap.json",
+    "build:moose:types": "tspc -p tsconfig.moose.json --declaration --emitDeclarationOnly",
+    "build:moose": "pnpm build:moose:types && tspc -p tsconfig.moose.json",
     "dev:next": "next dev --turbopack",
     "dev:moose": "moose-cli dev",
-    "dev": "pnpm build:olap && pnpm dev:next",
-    "build": "pnpm build:olap && next build",
+    "dev": "pnpm build:moose && pnpm dev:next",
+    "build": "pnpm build:moose && next build",
     "start": "next start",
     "moose": "moose-cli",
     "moose:update": "pnpm update @514labs/moose-lib @514labs/moose-cli"

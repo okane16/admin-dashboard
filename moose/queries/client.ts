@@ -1,4 +1,4 @@
-import { getMooseClients } from '@514labs/moose-lib';
+import { getMooseClients, Sql } from '@514labs/moose-lib';
 
 const globalForMoose = globalThis as unknown as {
   mooseClient: Awaited<ReturnType<typeof getMooseClients>> | undefined;
@@ -7,15 +7,14 @@ const globalForMoose = globalThis as unknown as {
 export const getMoose = async () => {
   if (globalForMoose.mooseClient) return globalForMoose.mooseClient;
 
-  // Create client with shorter timeout for demo if possible, or handle connection error later
   try {
     const client = await getMooseClients({
-      database: 'local',
-      host: 'localhost',
-      port: '18123',
-      username: 'panda',
-      password: 'pandapass',
-      useSSL: false
+      database: process.env.MOOSE_CLICKHOUSE_CONFIG__DB_NAME,
+      host: process.env.MOOSE_CLICKHOUSE_CONFIG__HOST,
+      port: process.env.MOOSE_CLICKHOUSE_CONFIG__PORT,
+      username: process.env.MOOSE_CLICKHOUSE_CONFIG__USER,
+      password: process.env.MOOSE_CLICKHOUSE_CONFIG__PASSWORD,
+      useSSL: process.env.MOOSE_CLICKHOUSE_CONFIG__USE_SSL === 'true'
     });
 
     if (process.env.NODE_ENV !== 'production') {
@@ -23,15 +22,12 @@ export const getMoose = async () => {
     }
     return client;
   } catch (error) {
-    console.warn(
-      'Failed to connect to Moose/ClickHouse, using mock mode:',
-      error
-    );
+    console.warn('Failed to connect to Moose/ClickHouse', error);
     return null;
   }
 };
 
-export async function executeQuery<T>(query: any): Promise<T> {
+export async function executeQuery<T>(query: Sql): Promise<T> {
   const moose = await getMoose();
   if (!moose) throw new Error('Failed to connect to Moose/ClickHouse');
   try {
