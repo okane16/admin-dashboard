@@ -1,4 +1,9 @@
 export default {
+  serverExternalPackages: [
+    '@confluentinc/kafka-javascript',
+    '@514labs/moose-lib'
+  ],
+  transpilePackages: [],
   images: {
     remotePatterns: [
       {

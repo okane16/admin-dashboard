@@ -1,4 +1,10 @@
 {
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs",
+      "moduleResolution": "node"
+    }
+  },
   "compilerOptions": {
     "target": "es5",
     "lib": ["dom", "dom.iterable", "esnext"],
@@ -17,14 +23,20 @@
     "baseUrl": ".",
     "paths": {
       "@/components/*": ["components/*"],
-      "@/lib/*": ["lib/*"]
+      "@/lib/*": ["lib/*"],
+      "@/moose/*": ["dist/*"]
     },
     "plugins": [
       {
-        "name": "next"
+        "name": "next",
+        "transform": "./node_modules/@514labs/moose-lib/dist/compilerPlugin.js",
+        "transformProgram": true
+      },
+      {
+        "transform": "typia/lib/transform"
       }
     ]
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "dist", "moose"]
 }
